@@ -72,17 +72,18 @@
     }
 
     // Function to derive a cryptographic key from a password
-    async function getKeyFromPassword(password) {
+    async function getKeyFromPassword(password, salt) {
       const encoder = new TextEncoder();
       const data = encoder.encode(password);
       const keyMaterial = await window.crypto.subtle.importKey(
         'raw', data, { name: 'PBKDF2' }, false, ['deriveKey']
       );
       
+      // Use the passed salt for PBKDF2
       const key = await window.crypto.subtle.deriveKey(
         {
           name: 'PBKDF2',
-          salt: new Uint8Array(16),  // Random salt should be used in real-world scenarios
+          salt: salt,
           iterations: 100000,
           hash: 'SHA-256'
         },
@@ -105,7 +106,10 @@
         return;
       }
 
-      const key = await getKeyFromPassword(password);
+      // Create a 128-byte random salt
+      const salt = window.crypto.getRandomValues(new Uint8Array(128));
+
+      const key = await getKeyFromPassword(password, salt);
       const encoder = new TextEncoder();
       const encodedText = encoder.encode(text);
 
@@ -121,8 +125,10 @@
 
         const encryptedText = arrayBufferToBase64(new Uint8Array(encryptedData));
         const ivText = arrayBufferToBase64(iv);
+        const saltText = arrayBufferToBase64(salt);
 
-        document.getElementById('encryptedText').value = ivText + ':' + encryptedText;
+        // Combine salt, IV, and encrypted text for decryption
+        document.getElementById('encryptedText').value = saltText + ':' + ivText + ':' + encryptedText;
       } catch (err) {
         console.error('Encryption failed', err);
       }
@@ -138,20 +144,22 @@
         return;
       }
 
-      // Split the encrypted input into IV and encrypted text
+      // Split the encrypted input into salt, IV, and encrypted text
       const parts = encryptedInput.split(':');
-      if (parts.length !== 2) {
+      if (parts.length !== 3) {
         alert('Invalid encrypted text format');
         return;
       }
 
-      const ivBase64 = parts[0];
-      const encryptedBase64 = parts[1];
+      const saltBase64 = parts[0];
+      const ivBase64 = parts[1];
+      const encryptedBase64 = parts[2];
 
+      const salt = base64ToArrayBuffer(saltBase64);
       const iv = base64ToArrayBuffer(ivBase64);
       const encryptedData = base64ToArrayBuffer(encryptedBase64);
 
-      const key = await getKeyFromPassword(password);
+      const key = await getKeyFromPassword(password, salt);
 
       try {
         const decryptedData = await window.crypto.subtle.decrypt(
@@ -171,3 +179,4 @@
   </script>
 </body>
 </html>
+
