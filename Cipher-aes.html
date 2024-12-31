@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Text Encryption Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    h2 {
+      color: #333;
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 16px;
+    }
+    button {
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h2>Encrypt and Decrypt Text</h2>
+
+  <label for="password">Enter Password (Used for Encryption/Decryption):</label>
+  <input type="password" id="password" placeholder="Password" required>
+
+  <label for="text">Enter Text to Encrypt:</label>
+  <textarea id="text" placeholder="Enter text here..." rows="4"></textarea>
+
+  <button onclick="encryptText()">Encrypt Text</button>
+
+  <h3>Encrypted Text</h3>
+  <textarea id="encryptedText" placeholder="Encrypted text will appear here..." rows="4" readonly></textarea>
+
+  <button onclick="decryptText()">Decrypt Text</button>
+
+  <h3>Decrypted Text</h3>
+  <textarea id="decryptedText" placeholder="Decrypted text will appear here..." rows="4" readonly></textarea>
+
+  <script>
+    // Helper function to convert ArrayBuffer to Base64
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return window.btoa(binary);
+    }
+
+    // Helper function to convert Base64 to ArrayBuffer
+    function base64ToArrayBuffer(base64) {
+      const binary_string = window.atob(base64);
+      const len = binary_string.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binary_string.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+
+    // Function to derive a cryptographic key from a password
+    async function getKeyFromPassword(password) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const keyMaterial = await window.crypto.subtle.importKey(
+        'raw', data, { name: 'PBKDF2' }, false, ['deriveKey']
+      );
+      
+      const key = await window.crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: new Uint8Array(16),  // Random salt should be used in real-world scenarios
+          iterations: 100000,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+      
+      return key;
+    }
+
+    // Encrypt Text Function
+    async function encryptText() {
+      const password = document.getElementById('password').value;
+      const text = document.getElementById('text').value;
+
+      if (!password || !text) {
+        alert('Password and text are required!');
+        return;
+      }
+
+      const key = await getKeyFromPassword(password);
+      const encoder = new TextEncoder();
+      const encodedText = encoder.encode(text);
+
+      // Create an initialization vector (IV)
+      const iv = window.crypto.getRandomValues(new Uint8Array(12));
+
+      try {
+        const encryptedData = await window.crypto.subtle.encrypt(
+          { name: 'AES-GCM', iv: iv },
+          key,
+          encodedText
+        );
+
+        const encryptedText = arrayBufferToBase64(new Uint8Array(encryptedData));
+        const ivText = arrayBufferToBase64(iv);
+
+        document.getElementById('encryptedText').value = ivText + ':' + encryptedText;
+      } catch (err) {
+        console.error('Encryption failed', err);
+      }
+    }
+
+    // Decrypt Text Function
+    async function decryptText() {
+      const password = document.getElementById('password').value;
+      const encryptedInput = document.getElementById('encryptedText').value;
+
+      if (!password || !encryptedInput) {
+        alert('Password and encrypted text are required!');
+        return;
+      }
+
+      // Split the encrypted input into IV and encrypted text
+      const parts = encryptedInput.split(':');
+      if (parts.length !== 2) {
+        alert('Invalid encrypted text format');
+        return;
+      }
+
+      const ivBase64 = parts[0];
+      const encryptedBase64 = parts[1];
+
+      const iv = base64ToArrayBuffer(ivBase64);
+      const encryptedData = base64ToArrayBuffer(encryptedBase64);
+
+      const key = await getKeyFromPassword(password);
+
+      try {
+        const decryptedData = await window.crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv: iv },
+          key,
+          encryptedData
+        );
+
+        const decoder = new TextDecoder();
+        const decryptedText = decoder.decode(decryptedData);
+        document.getElementById('decryptedText').value = decryptedText;
+      } catch (err) {
+        console.error('Decryption failed', err);
+        alert('Decryption failed. Please check the password or encrypted text.');
+      }
+    }
+  </script>
+</body>
+</html>
