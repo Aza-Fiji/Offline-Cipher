@@ -1,2 +1,9 @@
 Conclusion:
-It would take approximately 243 years to brute-force a 5-character password with AES-256, PBKDF2 with 1 million iterations, and a 128-byte salt, assuming 1 second per guess with a character set that includes lowercase, uppercase, digits, and symbols.
+It would take approximately 243 years 
+to brute-force a 5-character password 
+with AES-256, PBKDF2 with 
+1 million iterations, 
+and a 128-byte salt, 
+assuming 1 second per guess 
+with a character set that includes 
+lowercase, uppercase, digits, and symbols.
