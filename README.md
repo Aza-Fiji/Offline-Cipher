@@ -1,5 +1,7 @@
-Simple Offline html text encryption and decryption using; 
+Simple Offline single file html text encryption and decryption using; 
 AES-256
 PBKDF2 1MILLION Iterations
 Salted with 128 bytes(1024 bit)
 Use at own risk
+
+multi - created for multiple keys
