@@ -1,0 +1,17 @@
+Example:
+If you choose 3 keys, the text will be encrypted 3 times, once for each key.
+
+Here’s the process:
+
+1. The original text is encrypted with Key 1.
+
+
+2. The resulting encrypted text is then encrypted again with Key 2.
+
+
+3. The output from the second encryption is encrypted a third time with Key 3.
+
+
+
+This creates a multi-layer encryption where all 3 keys are required in reverse order (Key 3, Key 2, then Key 1) to decrypt the text successfully.
+
